@@ -1,0 +1,57 @@
+---
+# tasks file for prometheus_node_exporter
+  - name: Dependencies
+    yum: 
+        name: "{{ item }}"
+    with_items:
+        - golang-bin 
+        - gcc-go
+
+  - name: User for prometheus
+    user: 
+        name: prometheus
+
+  - name: Downloads directory
+    file:
+        path: /home/prometheus/downloads
+        state: directory
+    become: yes
+    become_user: prometheus
+
+  - name: Download node exporter
+    get_url:
+        url: https://github.com/prometheus/node_exporter/releases/download/v0.15.0/node_exporter-0.15.0.linux-amd64.tar.gz
+        dest: /home/prometheus/downloads
+    become: yes
+    become_user: prometheus
+
+  - name: run directory for node exporter
+    file:
+      path: /home/prometheus/node_exporter
+      state: directory
+
+  - name: Extract node_exporter
+    unarchive:
+        dest: /home/prometheus/node_exporter
+        remote_src: yes
+        src: /home/prometheus/downloads/node_exporter-0.15.0.linux-amd64.tar.gz
+
+  - name: Start script for node_exporter
+    template: 
+        src: usr/lib/systemd/system/node_exporter.service
+        dest: /usr/lib/systemd/system
+
+  - name: Systemd config script
+    template: 
+        src: etc/sysconfig/node_exporter
+        dest: /etc/sysconfig
+
+  - name: Systemd daemon reload
+    systemd:
+        daemon-reload: yes
+
+  - name: Systemd enable and start node_exporter
+    service:
+        state: started
+        enabled: yes
+        name: node_exporter.service
